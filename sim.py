@@ -446,6 +446,7 @@ class CricketField:
             # Recalculate segment coverage
             self._calculate_segment_coverage()
             self._update_shot_probabilities()
+            self.print_shot_analysis()
 
     def _handle_mouse_motion(self, event: pygame.event.Event):
         """Handle mouse motion events"""
@@ -471,6 +472,7 @@ class CricketField:
                 if event.key == pygame.K_RETURN:
                     self.input_active[key] = False
                     self._update_shot_probabilities()
+                    self.print_shot_analysis()
                 elif event.key == pygame.K_BACKSPACE:
                     self.input_text[key] = self.input_text[key][:-1]
                 elif event.unicode.isdigit():
@@ -481,7 +483,6 @@ class CricketField:
         self._update_input_values()
         self._clear_surfaces()
         self._draw_background()
-        # self._draw_field()
         
         if self.grid_enabled:
             self._draw_grid()
