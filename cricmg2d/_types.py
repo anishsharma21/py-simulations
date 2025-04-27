@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import Any, List, Tuple, Dict, TypedDict
 
 RgbColor = Tuple[int, int, int]
@@ -24,22 +24,21 @@ class ShotName(Enum):
     STRAIGHT_DRIVE = 4
     OFF_DRIVE = 5
     COVER_DRIVE = 6
-    LOFTED_DRIVE = 7
-    CUT = 8
-    SQUARE_CUT = 9
-    LATE_CUT = 10
-    UPPER_CUT = 11
-    LEG_GLANCE = 12
-    HOOK = 13
-    FLICK = 14
-    BLOCK = 15
-    TAP = 16
-    OUT = 17
-    LEAVE = 18
-    MISS = 19
-    LEG_BYES = 20
+    CUT = 7
+    SQUARE_CUT = 8
+    LATE_CUT = 9
+    UPPER_CUT = 10
+    LEG_GLANCE = 11
+    HOOK = 12
+    FLICK = 13
+    BLOCK = 14
+    TAP = 15
+    OUT = 16
+    LEAVE = 17
+    MISS = 18
+    LEG_BYES = 19
 
-class Power(Enum):
+class Power(IntEnum):
     ONE = 1
     TWO = 2
     THREE = 3
@@ -49,29 +48,29 @@ class Power(Enum):
     SEVEN = 7
     EIGHT = 8
 
-class Line(Enum):
+class Line(IntEnum):
     VERY_WIDE_OFF = 1
     WIDE_OFF = 2
     OUTSIDE_OFF = 3
-    STUMP = 4
+    STUMPS = 4
     OUTSIDE_LEG = 5
     WIDE_LEG = 6
     VERY_WIDE_LEG = 7
 
-class Length(Enum):
-    ONE = 1
-    TWO = 2
-    THREE = 3
-    FOUR = 4
-    FIVE = 5
-    SIX = 6
-    SEVEN = 7
+class Length(IntEnum):
+    VERY_SHORT = 1
+    SHORT = 2
+    BACK_OFF_A_LENGTH = 3
+    GOOD = 4
+    FULL = 5
+    YORKER = 6
+    FULL_TOSS = 7
 
 class ShotData(TypedDict):
     wedges: List[int]
-    power: Tuple[int, int]
-    line: Tuple[int, int]
-    length: Tuple[int, int]
+    power: Tuple[Power, Power]
+    line: Tuple[Line, Line]
+    length: Tuple[Length, Length]
 
 class BatsmanBaseTraits(TypedDict):
     timing: int
@@ -81,7 +80,7 @@ class BatsmanBaseTraits(TypedDict):
 class BatsmanInGameTraits(TypedDict):
     fatigue: int
     confidence: int
-    aggression: str
+    aggression: Aggression
 
 class Batsman(TypedDict):
     base_traits: BatsmanBaseTraits

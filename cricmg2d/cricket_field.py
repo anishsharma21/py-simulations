@@ -1,6 +1,8 @@
+import sys
 import math
 import pygame
 from typing import List, Tuple, Dict
+from watchdog_config import watch_for_changes, restart_program
 from game_config import GameConfig
 from geometry import GeometryUtils
 from shot_analyzer import ShotAnalyzer
@@ -32,9 +34,13 @@ class CricketField:
         self.zones_enabled = True
         self.inner_circle_enabled = True
         self.fielder_coverage_enabled = False
-        
+
+        # Watchdog settings
+        self.clock = pygame.time.Clock()
+        self.observer, self.event_handler = watch_for_changes()
+     
         # Game state
-        self.current_delivery_line = 4
+        self.current_delivery_line = 5
         self.current_delivery_length = 4
         self.selected_wedge = 0
         self.selected_fielder = None
@@ -62,7 +68,7 @@ class CricketField:
         
         # Input handling
         self.input_active = {"line": False, "length": False}
-        self.input_text = {"line": "", "length": ""}
+        self.input_text = {"line": str(self.current_delivery_line), "length": str(self.current_delivery_length)}
         self.input_boxes = {
             "line": pygame.Rect(600, 20, 60, 24),
             "length": pygame.Rect(600, 60, 60, 24)
@@ -163,7 +169,7 @@ class CricketField:
     def _update_shot_probabilities(self):
         """Update shot probabilities based on current game state"""
         self.potential_shots = ShotAnalyzer.find_potential_shots(
-            self.segments, 
+            self.segments,
             self.current_delivery_line, 
             self.current_delivery_length, 
             batsman
@@ -201,7 +207,7 @@ class CricketField:
                 self._handle_mouse_down(event)
 
             elif event.type == pygame.MOUSEBUTTONUP:
-                self._handle_mouse_up(event)
+                self._handle_mouse_up()
 
             elif event.type == pygame.MOUSEMOTION:
                 self._handle_mouse_motion(event)
@@ -225,7 +231,7 @@ class CricketField:
             else:
                 self.input_active[key] = False
 
-    def _handle_mouse_up(self, event: pygame.event.Event):
+    def _handle_mouse_up(self):
         """Handle mouse up events"""
         if self.selected_fielder is not None:
             self.selected_fielder = None
@@ -282,6 +288,8 @@ class CricketField:
         self._draw_highlights()
         self._draw_pitch()
         self._draw_players()
+        self._draw_zone_probabilities()
+        self._draw_segment_probabilities()
         self._draw_ui()
         
         # Final compositing
@@ -413,6 +421,103 @@ class CricketField:
         ball_pos = (400, 275)
         pygame.draw.circle(self.screen, self.colors['WHITE'], ball_pos, 2)
 
+    def _draw_zone_probabilities(self):
+        """Draw zone probabilities on the left side of the screen"""
+        # Background panel - make it slimmer
+        panel_rect = pygame.Rect(10, 100, 120, 400)  # Reduced width from 140 to 120, moved left from 20 to 10
+        panel_color = (40, 40, 40)  # Slightly lighter than background
+        pygame.draw.rect(self.screen, panel_color, panel_rect)
+        pygame.draw.rect(self.screen, self.colors['LIGHT_GRAY'], panel_rect, 1)  # Border
+        
+        # Title
+        title_font = pygame.font.SysFont('Arial', 14)  # Slightly smaller font
+        title = title_font.render("Zone Probabilities", True, self.colors['WHITE'])
+        self.screen.blit(title, (panel_rect.x + 5, panel_rect.y + 5))
+        
+        # Sort zone probabilities in descending order
+        sorted_zones = sorted(
+            self.zones_probabilities.items(), 
+            key=lambda item: item[1], 
+            reverse=True
+        )
+        
+        # Display each zone with its probability
+        y_offset = 35  # Reduced from 40
+        zone_font = pygame.font.SysFont('Arial', 12)  # Smaller font
+        
+        for zone, probability in sorted_zones:
+            # Create color based on probability (higher = more green)
+            green_value = min(255, int(255 * probability * 5))
+            zone_color = (255 - green_value, green_value, 0)
+            
+            # Zone label
+            zone_text = zone_font.render(f"Zone {zone}:", True, self.colors['WHITE'])
+            self.screen.blit(zone_text, (panel_rect.x + 5, panel_rect.y + y_offset))
+            
+            # Probability value
+            prob_text = zone_font.render(f"{probability:.3f}", True, zone_color)  # Show 3 decimals instead of 4
+            self.screen.blit(prob_text, (panel_rect.x + 65, panel_rect.y + y_offset))  # Adjusted position
+            
+            # Progress bar background - made narrower
+            bar_rect = pygame.Rect(panel_rect.x + 5, panel_rect.y + y_offset + 18, 110, 6)  # Slimmer bar
+            pygame.draw.rect(self.screen, (70, 70, 70), bar_rect)
+            
+            # Probability bar
+            bar_width = int(110 * probability)  # Adjusted to match new width
+            if bar_width > 0:
+                prob_bar_rect = pygame.Rect(panel_rect.x + 5, panel_rect.y + y_offset + 18, bar_width, 6)
+                pygame.draw.rect(self.screen, zone_color, prob_bar_rect)
+            
+            y_offset += 32  # Slightly reduce spacing between entries
+
+    def _draw_segment_probabilities(self):
+        """Draw top 10 segment probabilities on the right side of the screen"""
+        # Background panel
+        panel_rect = pygame.Rect(670, 100, 120, 400)  # Right side of screen
+        panel_color = (40, 40, 40)  # Same as zone probabilities panel
+        pygame.draw.rect(self.screen, panel_color, panel_rect)
+        pygame.draw.rect(self.screen, self.colors['LIGHT_GRAY'], panel_rect, 1)  # Border
+        
+        # Title
+        title_font = pygame.font.SysFont('Arial', 14)
+        title = title_font.render("Top Segments", True, self.colors['WHITE'])
+        self.screen.blit(title, (panel_rect.x + 5, panel_rect.y + 5))
+        
+        # Get top 10 segments (filter out special segments like OUT, LEAVE, etc.)
+        top_segments = [
+            (seg_id, prob) for seg_id, prob in self.shot_probabilities.items()
+            if seg_id.startswith('W')  # Only include actual field segments
+        ][:10]  # Take only top 10
+        
+        # Display each segment with its probability
+        y_offset = 35
+        segment_font = pygame.font.SysFont('Arial', 12)
+        
+        for segment_id, probability in top_segments:
+            # Create color based on probability (higher = more green)
+            green_value = min(255, int(255 * probability * 5))
+            segment_color = (255 - green_value, green_value, 0)
+            
+            # Segment label
+            segment_text = segment_font.render(f"{segment_id}:", True, self.colors['WHITE'])
+            self.screen.blit(segment_text, (panel_rect.x + 5, panel_rect.y + y_offset))
+            
+            # Probability value
+            prob_text = segment_font.render(f"{probability:.3f}", True, segment_color)
+            self.screen.blit(prob_text, (panel_rect.x + 65, panel_rect.y + y_offset))
+            
+            # Progress bar background
+            bar_rect = pygame.Rect(panel_rect.x + 5, panel_rect.y + y_offset + 18, 110, 6)
+            pygame.draw.rect(self.screen, (70, 70, 70), bar_rect)
+            
+            # Probability bar
+            bar_width = int(110 * probability)
+            if bar_width > 0:
+                prob_bar_rect = pygame.Rect(panel_rect.x + 5, panel_rect.y + y_offset + 18, bar_width, 6)
+                pygame.draw.rect(self.screen, segment_color, prob_bar_rect)
+            
+            y_offset += 32
+
     def _draw_ui(self):
         """Draw UI elements"""
         # Display current wedge index
@@ -433,22 +538,29 @@ class CricketField:
 
     def run(self):
         """Main game loop"""
+        self.print_shot_analysis()
         while self.running:
+            if self.event_handler.is_modified():
+                self.observer.stop()
+                self.observer.join()
+                pygame.quit()
+                restart_program()
             self._handle_events()
             self._draw()
         
+        self.observer.stop()
+        self.observer.join()
+        pygame.quit()
+        sys.exit()
         pygame.quit()
 
     def print_shot_analysis(self):
         """Print analysis of shot probabilities"""
-        print("Probabilities based on zones:")
-        for zone_id, probability in self.zones_probabilities.items():
-            print(f"Zone: {zone_id}, Probability: {probability:.5f}")
-
+        sorted_potential_shots = sorted(
+            self.potential_shots.items(),
+            key=lambda item: item[1][0],  # Sort by shot value (first element in the tuple)
+            reverse=True  # Descending order
+        )
         print("Potential shots based on current delivery line and length:")
-        for segment_id, (shot_value, shot_name) in self.adjusted_potential_shots.items():
+        for segment_id, (shot_value, shot_name) in sorted_potential_shots:
             print(f"Segment: {segment_id}, Shot Value: {shot_value}, Shot Name: {shot_name}")
-        
-        print("Shot probabilities:")
-        for segment_id, probability in self.shot_probabilities.items():
-            print(f"Segment: {segment_id}, Probability: {probability:.5f}")

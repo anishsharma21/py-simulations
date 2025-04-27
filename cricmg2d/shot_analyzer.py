@@ -47,7 +47,8 @@ class ShotAnalyzer:
             power: Tuple[int, int] = data['power']
 
             for wedge_val in wedges:
-                for power_val in power:
+                for i in range(power[0], power[1] + 1):
+                    power_val: int = i
                     segment_id: str = f"W{wedge_val}Z{power_val}"
                     segment_shot_initial_value: float = batsman['shots'].get(shot_name, 0)
                     segment_shot_values[segment_id] = (segment_shot_initial_value, shot_name)
@@ -58,6 +59,9 @@ class ShotAnalyzer:
             if seg_id in weak_areas:
                 seg_shot_val = (seg_shot_val[0] * batsman_judgement_multiplier, seg_shot_val[1])
                 segment_shot_values[seg_id] = seg_shot_val
+            else:
+                seg_shot_val = (seg_shot_val[0] * 0.8, seg_shot_val[1])
+                segment_shot_values[seg_id] = seg_shot_val
         
         return segment_shot_values
 
@@ -66,25 +70,25 @@ class ShotAnalyzer:
         if aggression == Aggression.VERY_DEFENSIVE:
             for seg_id, (shot_value, shot_name) in segment_shot_values.items():
                 if shot_name in [ShotName.BLOCK, ShotName.TAP] or seg_id.endswith(("Z1", "Z2", "Z3")):
-                    segment_shot_values[seg_id] = (shot_value * 3, shot_name)
+                    segment_shot_values[seg_id] = (shot_value * 4, shot_name)
                 elif seg_id.endswith(("Z4", "Z5", "Z6", "Z7")):
                     segment_shot_values[seg_id] = (shot_value * 0.5, shot_name)
         elif aggression == Aggression.DEFENSIVE:
             for seg_id, (shot_value, shot_name) in segment_shot_values.items():
                 if shot_name in [ShotName.BLOCK, ShotName.TAP] or seg_id.endswith(("Z1", "Z2", "Z3")):
-                    segment_shot_values[seg_id] = (shot_value * 1.5, shot_name)
+                    segment_shot_values[seg_id] = (shot_value * 2, shot_name)
                 elif seg_id.endswith(("Z4", "Z5", "Z6", "Z7")):
                     segment_shot_values[seg_id] = (shot_value * 0.75, shot_name)
         elif aggression == Aggression.ATTACKING:
             for seg_id, (shot_value, shot_name) in segment_shot_values.items():
                 if seg_id.endswith(("Z5", "Z6", "Z7")):
-                    segment_shot_values[seg_id] = (shot_value * 1.5, shot_name)
+                    segment_shot_values[seg_id] = (shot_value * 2, shot_name)
                 elif seg_id.endswith(("Z1", "Z2")):
                     segment_shot_values[seg_id] = (shot_value * 0.75, shot_name)
         elif aggression == Aggression.VERY_ATTACKING:
             for seg_id, (shot_value, shot_name) in segment_shot_values.items():
                 if seg_id.endswith(("Z5", "Z6", "Z7")):
-                    segment_shot_values[seg_id] = (shot_value * 3, shot_name)
+                    segment_shot_values[seg_id] = (shot_value * 4, shot_name)
                 elif seg_id.endswith(("Z1", "Z2", "Z3")):
                     segment_shot_values[seg_id] = (shot_value * 0.5, shot_name)
 
