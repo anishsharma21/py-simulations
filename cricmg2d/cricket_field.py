@@ -36,12 +36,12 @@ class CricketField:
         self.fielder_coverage_enabled = False
 
         # Watchdog settings
-        self.clock = pygame.time.Clock()
         self.observer, self.event_handler = watch_for_changes()
      
         # Game state
-        self.current_delivery_line = 5
-        self.current_delivery_length = 4
+        self.current_delivery_line = 4
+        self.current_delivery_length = 5
+        self.aggression_level = Aggression.NEUTRAL
         self.selected_wedge = 0
         self.selected_fielder = None
         self.offset_x = 0
@@ -60,9 +60,9 @@ class CricketField:
         self.coverage_surface = pygame.Surface((config.width, config.height), pygame.SRCALPHA)
         
         # Field elements
-        self.batsman_pos = (400, 260)
-        self.ellipse_cx = 400
-        self.ellipse_cy = 300
+        self.batsman_pos = (700, 360)
+        self.ellipse_cx = 700
+        self.ellipse_cy = 400
         self.ellipse_rx = 240
         self.ellipse_ry = 240
         
@@ -131,16 +131,16 @@ class CricketField:
         
         # Default fielder positions
         self.fielders = [
-            (400, 200),  # Wicket-keeper
-            (330, 400),  # Mid-off
-            (350, 310),  # Short cover
-            (200, 200),  # Deep point
-            (385, 190),  # 1st slip
-            (370, 192),  # 2nd slip
-            (355, 198),  # 3rd slip
-            (490, 325),  # Midwicket
-            (550, 125),  # Fine leg
-            (450, 525),  # Long on
+            (700, 300),  # Wicket-keeper
+            (630, 500),  # Mid-off
+            (650, 410),  # Short cover
+            (500, 300),  # Deep point
+            (685, 290),  # 1st slip
+            (670, 292),  # 2nd slip
+            (655, 298),  # 3rd slip
+            (790, 425),  # Midwicket
+            (850, 225),  # Fine leg
+            (750, 625),  # Long on
         ]
 
     def _calculate_segment_coverage(self):
@@ -176,7 +176,7 @@ class CricketField:
         )
         self.adjusted_potential_shots = ShotAnalyzer.adjust_potential_shots(
             self.potential_shots, 
-            Aggression.VERY_ATTACKING
+            self.aggression_level
         )
         self.shot_probabilities = ShotAnalyzer.calculate_potential_shot_probabilities(
             self.adjusted_potential_shots
@@ -328,11 +328,11 @@ class CricketField:
         )
         
         # Draw boundary line
-        pygame.draw.ellipse(self.screen, self.colors['LIGHT_GRAY'], (160, 60, 480, 480), 2)
+        pygame.draw.ellipse(self.screen, self.colors['LIGHT_GRAY'], (460, 160, 480, 480), 2)
 
         # Draw inner circle
         if self.inner_circle_enabled:
-            pygame.draw.circle(self.screen, self.colors['LIGHT_GRAY'], (400, 300), 130, 2)
+            pygame.draw.circle(self.screen, self.colors['LIGHT_GRAY'], (700, 400), 130, 2)
 
     def _draw_grid(self):
         """Draw coordinate grid"""
@@ -399,11 +399,11 @@ class CricketField:
     def _draw_pitch(self):
         """Draw the cricket pitch"""
         # Draw pitch
-        pygame.draw.rect(self.screen, self.colors['PITCH_COLOUR'], (393, 250, 15, 100))
+        pygame.draw.rect(self.screen, self.colors['PITCH_COLOUR'], (693, 350, 15, 100))
         
         # Draw crease lines
-        pygame.draw.line(self.screen, self.colors['LIGHT_GRAY'], (390, 250), (410, 250), 1)
-        pygame.draw.line(self.screen, self.colors['LIGHT_GRAY'], (390, 350), (410, 350), 1)
+        pygame.draw.line(self.screen, self.colors['LIGHT_GRAY'], (690, 350), (710, 350), 1)
+        pygame.draw.line(self.screen, self.colors['LIGHT_GRAY'], (690, 450), (710, 450), 1)
 
     def _draw_players(self):
         """Draw all players and ball"""
@@ -415,22 +415,22 @@ class CricketField:
         pygame.draw.circle(self.screen, self.colors['RED'], self.batsman_pos, 4)
 
         # Draw bowler
-        pygame.draw.circle(self.screen, self.colors['WHITE'], (395, 425), 4)
+        pygame.draw.circle(self.screen, self.colors['WHITE'], (695, 525), 4)
 
         # Draw ball
-        ball_pos = (400, 275)
+        ball_pos = (700, 375)
         pygame.draw.circle(self.screen, self.colors['WHITE'], ball_pos, 2)
 
     def _draw_zone_probabilities(self):
         """Draw zone probabilities on the left side of the screen"""
         # Background panel - make it slimmer
-        panel_rect = pygame.Rect(10, 100, 120, 400)  # Reduced width from 140 to 120, moved left from 20 to 10
+        panel_rect = pygame.Rect(10, 50, 120, 280)  # Reduced width from 140 to 120, moved left from 20 to 10
         panel_color = (40, 40, 40)  # Slightly lighter than background
         pygame.draw.rect(self.screen, panel_color, panel_rect)
         pygame.draw.rect(self.screen, self.colors['LIGHT_GRAY'], panel_rect, 1)  # Border
         
         # Title
-        title_font = pygame.font.SysFont('Arial', 14)  # Slightly smaller font
+        title_font = pygame.font.SysFont('Arial', 13)  # Slightly smaller font
         title = title_font.render("Zone Probabilities", True, self.colors['WHITE'])
         self.screen.blit(title, (panel_rect.x + 5, panel_rect.y + 5))
         
@@ -473,7 +473,7 @@ class CricketField:
     def _draw_segment_probabilities(self):
         """Draw top 10 segment probabilities on the right side of the screen"""
         # Background panel
-        panel_rect = pygame.Rect(670, 100, 120, 400)  # Right side of screen
+        panel_rect = pygame.Rect(1270, 10, 120, 400)  # Right side of screen
         panel_color = (40, 40, 40)  # Same as zone probabilities panel
         pygame.draw.rect(self.screen, panel_color, panel_rect)
         pygame.draw.rect(self.screen, self.colors['LIGHT_GRAY'], panel_rect, 1)  # Border
